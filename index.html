@@ -1,0 +1,422 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CapabilityAccessManager スリム化ツール</title>
+<style>
+  :root{
+    --bg:#F4F6F8;
+    --card:#FFFFFF;
+    --ink:#1B2430;
+    --ink-soft:#4B5563;
+    --accent:#1E5AA8;
+    --accent-deep:#153F76;
+    --line:#DDE3EA;
+    --warn-bg:#FDF6E7;
+    --warn-line:#E8CE9A;
+    --warn-ink:#8A5A0B;
+    --code-bg:#16202B;
+    --code-ink:#D7E2EE;
+    --ok:#1A7F4B;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{scroll-behavior:smooth}
+  body{
+    background:var(--bg);
+    color:var(--ink);
+    font-family:"Segoe UI","Yu Gothic UI","Hiragino Sans","Meiryo",sans-serif;
+    line-height:1.85;
+    font-size:16px;
+  }
+  .wrap{max-width:780px;margin:0 auto;padding:0 20px 80px}
+
+  /* ---- hero ---- */
+  header{padding:56px 0 40px;border-bottom:1px solid var(--line)}
+  .eyebrow{
+    display:inline-block;font-size:12.5px;font-weight:600;letter-spacing:.08em;
+    color:var(--accent);border:1px solid var(--accent);border-radius:999px;
+    padding:3px 14px;margin-bottom:18px;background:#EDF3FB;
+  }
+  h1{font-size:clamp(26px,4.6vw,36px);font-weight:700;line-height:1.35;letter-spacing:.01em}
+  .lede{margin-top:14px;color:var(--ink-soft);max-width:640px}
+  .lede strong{color:var(--ink)}
+
+  .dl-area{margin-top:30px;display:flex;flex-wrap:wrap;align-items:center;gap:16px}
+  .dl-btn{
+    appearance:none;border:none;cursor:pointer;
+    background:var(--accent);color:#fff;
+    font-family:inherit;font-size:17px;font-weight:700;
+    padding:15px 34px;border-radius:8px;
+    box-shadow:0 2px 0 var(--accent-deep);
+    transition:transform .08s ease,background .15s ease;
+  }
+  .dl-btn:hover{background:var(--accent-deep)}
+  .dl-btn:active{transform:translateY(2px);box-shadow:none}
+  .dl-btn:focus-visible{outline:3px solid #9DBBE3;outline-offset:2px}
+  .dl-meta{font-size:13px;color:var(--ink-soft)}
+  .dl-meta code{font-family:Consolas,monospace;font-size:12px;background:#EAEEF3;padding:2px 6px;border-radius:4px}
+  .hash-row{margin-top:14px;font-size:12.5px;color:var(--ink-soft)}
+  .hash-row code{
+    font-family:Consolas,monospace;font-size:11.5px;word-break:break-all;
+    background:#EAEEF3;padding:3px 8px;border-radius:4px;display:inline-block;margin-top:4px;
+  }
+  .dl-done{display:none;margin-top:12px;font-size:14px;color:var(--ok);font-weight:600}
+
+  /* ---- shrink bar (hero visual) ---- */
+  .shrink{
+    margin-top:34px;background:var(--card);border:1px solid var(--line);
+    border-radius:10px;padding:18px 22px;
+  }
+  .shrink .label{font-size:12.5px;color:var(--ink-soft);display:flex;justify-content:space-between;margin-bottom:8px}
+  .bar{height:14px;background:#E6EAEF;border-radius:7px;overflow:hidden}
+  .bar > span{
+    display:block;height:100%;width:96%;
+    background:linear-gradient(90deg,#C4462F,#E07B4C);border-radius:7px;
+  }
+  @media (prefers-reduced-motion:no-preference){
+    .bar > span{animation:shrink 2.6s ease-in-out 1s forwards}
+    @keyframes shrink{to{width:1.5%;background:#3B8F63}}
+  }
+  .shrink .note{font-size:12px;color:var(--ink-soft);margin-top:8px}
+
+  /* ---- sections ---- */
+  section{margin-top:52px}
+  h2{
+    font-size:20px;font-weight:700;padding-left:14px;margin-bottom:18px;
+    border-left:4px solid var(--accent);line-height:1.4;
+  }
+  p + p{margin-top:12px}
+  .muted{color:var(--ink-soft)}
+
+  .steps{list-style:none;counter-reset:s}
+  .steps li{
+    counter-increment:s;position:relative;padding:0 0 18px 52px;
+  }
+  .steps li::before{
+    content:counter(s);position:absolute;left:0;top:2px;
+    width:34px;height:34px;border-radius:50%;
+    background:var(--accent);color:#fff;font-weight:700;font-size:15px;
+    display:flex;align-items:center;justify-content:center;
+  }
+  .steps li:not(:last-child)::after{
+    content:"";position:absolute;left:16.5px;top:40px;bottom:2px;width:1px;background:var(--line);
+  }
+  .steps b{display:block;font-size:15.5px}
+  .steps span{font-size:14px;color:var(--ink-soft)}
+
+  .card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:22px 24px}
+  .card ul{padding-left:1.3em}
+  .card li{margin:6px 0;font-size:15px}
+
+  /* ---- SmartScreen mock ---- */
+  .warnbox{background:var(--warn-bg);border:1px solid var(--warn-line);border-radius:10px;padding:22px 24px}
+  .warnbox h3{font-size:15.5px;color:var(--warn-ink);margin-bottom:10px}
+  .warnbox p{font-size:14.5px}
+  .ss-mock{
+    margin:20px auto 8px;max-width:430px;background:#0B5CAB;color:#fff;
+    border-radius:6px;padding:26px 28px 22px;font-family:"Segoe UI","Yu Gothic UI",sans-serif;
+    box-shadow:0 10px 28px rgba(11,60,110,.28);
+  }
+  .ss-mock h4{font-size:19px;font-weight:600;margin-bottom:10px}
+  .ss-mock p{font-size:12.5px;line-height:1.7;color:#DCE9F7}
+  .ss-link{
+    display:inline-block;margin-top:10px;color:#fff;font-size:12.5px;
+    text-decoration:underline;text-underline-offset:3px;position:relative;
+  }
+  .ss-btns{display:flex;justify-content:flex-end;gap:10px;margin-top:22px}
+  .ss-btn{
+    font-size:13px;padding:7px 22px;border-radius:3px;
+    background:#CFE0F1;color:#0B2C50;font-weight:600;
+  }
+  .ss-btn.primary{background:#fff}
+  .pin{
+    position:absolute;display:inline-flex;align-items:center;justify-content:center;
+    width:22px;height:22px;border-radius:50%;background:#E07B22;color:#fff;
+    font-size:12px;font-weight:700;box-shadow:0 0 0 3px rgba(224,123,34,.3);
+  }
+  .pin.p1{right:-30px;top:-1px}
+  .pin.p2{right:-11px;top:-11px}
+  .ss-cap{font-size:12.5px;color:var(--warn-ink);text-align:center;margin-top:10px}
+
+  /* ---- code ---- */
+  details{background:var(--card);border:1px solid var(--line);border-radius:10px;overflow:hidden}
+  summary{
+    cursor:pointer;padding:16px 22px;font-weight:600;font-size:15px;
+    list-style:none;display:flex;align-items:center;gap:10px;user-select:none;
+  }
+  summary::before{content:"▸";color:var(--accent);transition:transform .15s}
+  details[open] summary::before{transform:rotate(90deg)}
+  summary:hover{background:#F3F6FA}
+  .codewrap{position:relative;border-top:1px solid var(--line)}
+  pre{
+    background:var(--code-bg);color:var(--code-ink);
+    font-family:Consolas,"MS Gothic",monospace;font-size:12.5px;line-height:1.7;
+    padding:20px 22px;overflow-x:auto;max-height:480px;
+  }
+  .copy-btn{
+    position:absolute;top:10px;right:12px;
+    background:#2B3A4C;color:#C9D6E4;border:1px solid #3D4F64;border-radius:6px;
+    font-family:inherit;font-size:12px;padding:5px 14px;cursor:pointer;
+  }
+  .copy-btn:hover{background:#3A4D63}
+
+  footer{
+    margin-top:64px;padding-top:22px;border-top:1px solid var(--line);
+    font-size:12.5px;color:var(--ink-soft);
+  }
+  footer p + p{margin-top:6px}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <span class="eyebrow">Windows 11 不具合対策ツール</span>
+    <h1>CapabilityAccessManager<br>スリム化ツール</h1>
+    <p class="lede">
+      Windows 11 の一部環境で、<strong>CapabilityAccessManager.db-wal</strong> というシステムファイルが
+      異常に肥大化し、Cドライブの空き容量を数GB〜数十GB単位で圧迫する不具合が確認されています。
+      修正更新プログラム(KB5101650)の適用で新たな肥大化は抑えられますが、
+      <strong>すでに肥大化したファイルは自動では小さくなりません。</strong><br>
+      このツールは、その削除作業(サービス停止 → ファイル削除 → サービス再開)を
+      <strong>ダブルクリック一発</strong>で安全に行うバッチファイルです。
+    </p>
+
+    <div class="dl-area">
+      <button class="dl-btn" id="dlBtn" type="button">⬇ CAM_Cleanup.bat をダウンロード</button>
+      <div class="dl-meta">
+        ファイル名: <code>CAM_Cleanup.bat</code><br>
+        種類: Windows バッチファイル / 対応: Windows 11
+      </div>
+    </div>
+    <p class="dl-done" id="dlDone">✔ ダウンロードを開始しました。ダウンロードフォルダーをご確認ください。</p>
+    <div class="hash-row">
+      SHA-256 (改ざんがないことの確認用):<br>
+      <code id="hashVal">計算中...</code>
+    </div>
+
+    <div class="shrink" aria-hidden="true">
+      <div class="label"><span>CapabilityAccessManager.db-wal</span><span>実行イメージ</span></div>
+      <div class="bar"><span></span></div>
+      <p class="note">肥大化したファイル(例: 数十GB)を削除し、Windows が数KBの正常なファイルを自動で作り直します。</p>
+    </div>
+  </header>
+
+  <section>
+    <h2>使い方は3ステップ</h2>
+    <ol class="steps">
+      <li>
+        <b>上のボタンからファイルをダウンロード</b>
+        <span>「CAM_Cleanup.bat」がダウンロードフォルダーに保存されます。</span>
+      </li>
+      <li>
+        <b>ファイルをダブルクリックして実行</b>
+        <span>青い警告画面が出た場合は、下の「警告画面が出たとき」の手順で進めてください。</span>
+      </li>
+      <li>
+        <b>「ユーザー アカウント制御」の画面で「はい」を押す</b>
+        <span>あとは全自動です。黒い画面に「処理が完了しました」と表示されたら終了です。</span>
+      </li>
+    </ol>
+  </section>
+
+  <section>
+    <h2>警告画面が出たときは(正常な動作です)</h2>
+    <div class="warnbox">
+      <h3>「Windows によって PC が保護されました」と表示されたら</h3>
+      <p>
+        この青い画面は SmartScreen という機能によるもので、<b>電子署名のない配布ファイル全般に表示される標準的な確認画面</b>です。
+        ウイルス検出ではありません。次の2ステップで実行できます。
+      </p>
+      <div class="ss-mock" role="img" aria-label="SmartScreen警告画面の見本。まず「詳細情報」を押し、次に「実行」ボタンを押します。">
+        <h4>Windows によって PC が保護されました</h4>
+        <p>Microsoft Defender SmartScreen は認識されないアプリの起動を停止しました。このアプリを実行すると、PC が危険にさらされる可能性があります。</p>
+        <span class="ss-link">詳細情報<span class="pin p1">1</span></span>
+        <div class="ss-btns">
+          <span class="ss-btn primary" style="position:relative">実行<span class="pin p2">2</span></span>
+          <span class="ss-btn">実行しない</span>
+        </div>
+      </div>
+      <p class="ss-cap">① 左上の「詳細情報」を押す → ② 右下に現れる「実行」を押す</p>
+    </div>
+  </section>
+
+  <section>
+    <h2>このツールが行うこと</h2>
+    <div class="card">
+      <ul>
+        <li>管理者権限への昇格を自動で行います(「はい」を押すだけ)</li>
+        <li>処理前後のファイルサイズを画面に表示します</li>
+        <li>Capability Access Manager サービス(camsvc)を一時停止します</li>
+        <li>肥大化したデータベースファイル3点(.db / .db-wal / .db-shm)を削除します</li>
+        <li>サービスを自動で再開します。削除したファイルは Windows が正常な状態で作り直します</li>
+      </ul>
+    </div>
+  </section>
+
+  <section>
+    <h2>安全性について</h2>
+    <div class="card">
+      <p style="font-size:15px">
+        削除されるのは「設定 → プライバシーとセキュリティ」に表示される
+        <b>アプリの権限アクセス履歴(カメラやマイクの最終使用日時など)だけ</b>です。
+        個人ファイル・アプリ・設定には一切影響せず、履歴は今後の使用に応じて再び記録されていきます。
+      </p>
+      <p style="font-size:15px">
+        サービスの停止に失敗した場合やファイルが使用中の場合は、システムに手を加えずに中断し、
+        「PCを再起動してから再実行してください」と案内する安全設計になっています。
+      </p>
+    </div>
+  </section>
+
+  <section>
+    <h2>実行内容の全文(実行前に確認できます)</h2>
+    <p class="muted" style="font-size:14px;margin-bottom:14px">
+      ダウンロードされるバッチファイルの中身はこのとおりです。メモ帳でも開いて確認できます。
+    </p>
+    <details>
+      <summary>ソースコードを表示する</summary>
+      <div class="codewrap">
+        <button class="copy-btn" id="copyBtn" type="button">コピー</button>
+        <pre id="codeView"></pre>
+      </div>
+    </details>
+  </section>
+
+  <footer>
+    <p>本ツールは無償で提供されるものであり、利用によって生じたいかなる結果についても作成者は責任を負いません。自己の責任においてご利用ください。</p>
+    <p>再配布・改変は自由です。改変版を配布する場合は、上記 SHA-256 と一致しない旨を明記してください。</p>
+  </footer>
+</div>
+
+<script>
+const BAT_LF = String.raw`@echo off
+chcp 65001 >nul
+title CapabilityAccessManager スリム化ツール
+
+:: ===== 管理者権限チェック & 自己昇格 =====
+net session >nul 2>&1
+if %errorlevel% neq 0 (
+    echo 管理者権限が必要です。確認ダイアログで「はい」を押してください...
+    powershell -NoProfile -Command "Start-Process -FilePath '%~f0' -Verb RunAs"
+    exit /b
+)
+
+set "CAMDIR=%ProgramData%\Microsoft\Windows\CapabilityAccessManager"
+
+echo ============================================================
+echo   CapabilityAccessManager スリム化ツール
+echo ============================================================
+echo.
+
+:: ===== 現在のファイルサイズを表示 =====
+echo 【処理前のファイルサイズ】
+powershell -NoProfile -Command "Get-ChildItem '%CAMDIR%\CapabilityAccessManager.db*' -ErrorAction SilentlyContinue | ForEach-Object { '{0,-40} {1,12:N1} MB' -f $_.Name, ($_.Length/1MB) }"
+echo.
+
+:: ===== camsvc サービス停止 =====
+echo Capability Access Manager サービスを停止しています...
+sc stop camsvc >nul 2>&1
+
+:: 停止完了を最大30秒待機
+set /a COUNT=0
+:WAIT_STOP
+sc query camsvc | find "STOPPED" >nul
+if %errorlevel% equ 0 goto STOPPED
+set /a COUNT+=1
+if %COUNT% geq 30 (
+    echo.
+    echo [エラー] サービスを停止できませんでした。
+    echo PCを再起動してから、もう一度このツールを実行してください。
+    echo.
+    pause
+    exit /b 1
+)
+timeout /t 1 /nobreak >nul
+goto WAIT_STOP
+
+:STOPPED
+echo サービスを停止しました。
+echo.
+
+:: ===== 肥大化ファイルの削除 =====
+echo データベースファイルを削除しています...
+del /f /q "%CAMDIR%\CapabilityAccessManager.db-wal" 2>nul
+del /f /q "%CAMDIR%\CapabilityAccessManager.db-shm" 2>nul
+del /f /q "%CAMDIR%\CapabilityAccessManager.db"     2>nul
+
+:: 削除できたか確認(wal が残っていたら失敗扱い)
+if exist "%CAMDIR%\CapabilityAccessManager.db-wal" (
+    echo.
+    echo [エラー] ファイルを削除できませんでした。
+    echo PCを再起動してから、もう一度このツールを実行してください。
+    echo.
+    sc start camsvc >nul 2>&1
+    pause
+    exit /b 1
+)
+echo 削除が完了しました。
+echo.
+
+:: ===== camsvc サービス再開 =====
+echo サービスを再開しています...
+sc start camsvc >nul 2>&1
+timeout /t 3 /nobreak >nul
+
+echo.
+echo 【処理後のファイルサイズ】
+powershell -NoProfile -Command "$f = Get-ChildItem '%CAMDIR%\CapabilityAccessManager.db*' -ErrorAction SilentlyContinue; if ($f) { $f | ForEach-Object { '{0,-40} {1,12:N1} MB' -f $_.Name, ($_.Length/1MB) } } else { '(ファイルは再作成待ちです。Windows が自動的に作り直します)' }"
+echo.
+echo ============================================================
+echo   処理が完了しました。このウィンドウは閉じて構いません。
+echo ============================================================
+echo.
+pause
+`;
+
+// Windows バッチ用に CRLF へ変換(UTF-8 / BOMなし。chcp 65001 前提)
+const BAT_CONTENT = BAT_LF.replace(/\r?\n/g, "\r\n");
+
+// ソースコード表示
+document.getElementById("codeView").textContent = BAT_LF;
+
+// SHA-256 を計算して表示
+(async () => {
+  try {
+    const buf = new TextEncoder().encode(BAT_CONTENT);
+    const digest = await crypto.subtle.digest("SHA-256", buf);
+    const hex = [...new Uint8Array(digest)].map(b => b.toString(16).padStart(2, "0")).join("");
+    document.getElementById("hashVal").textContent = hex;
+  } catch (e) {
+    document.getElementById("hashVal").textContent = "(この環境では計算できませんでした)";
+  }
+})();
+
+// ダウンロード
+document.getElementById("dlBtn").addEventListener("click", () => {
+  const blob = new Blob([BAT_CONTENT], { type: "application/octet-stream" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "CAM_Cleanup.bat";
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 4000);
+  document.getElementById("dlDone").style.display = "block";
+});
+
+// コードのコピー
+document.getElementById("copyBtn").addEventListener("click", async (ev) => {
+  try {
+    await navigator.clipboard.writeText(BAT_CONTENT);
+    ev.target.textContent = "コピーしました";
+    setTimeout(() => { ev.target.textContent = "コピー"; }, 2000);
+  } catch (e) {
+    ev.target.textContent = "コピーできませんでした";
+  }
+});
+</script>
+</body>
+</html>
