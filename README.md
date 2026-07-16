@@ -83,4 +83,4 @@ C:\ProgramData\Microsoft\Windows\CapabilityAccessManager\CapabilityAccessManager
 
 ## ライセンス
 
-[MIT License](LICENSE)
+[aoishingo925](LICENSE)
