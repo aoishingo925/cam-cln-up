@@ -25,7 +25,7 @@ C:\ProgramData\Microsoft\Windows\CapabilityAccessManager\CapabilityAccessManager
 **[Releases ページ](../../releases/latest)** から `CAM_Cleanup.bat` をダウンロードしてください。
 
 ブラウザで完結する配布ページ(解説・ダウンロードボタン付き)も用意しています:
-**https://＜ユーザー名＞.github.io/＜リポジトリ名＞/**
+**https://aoishingo925.github.io/cam-cln-up/**
 
 ## 使い方
 
